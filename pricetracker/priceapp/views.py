@@ -7,7 +7,7 @@ from .forms import PriceScannerForm
 from .models import Item
 from .utils import extract_text_from_image, parse_text_to_items
 
-def upload_image(request):
+def pricescanner(request):
     if request.method == "POST":
         form = PriceScannerForm(request.POST, request.FILES)
         if form.is_valid():

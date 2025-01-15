@@ -1,6 +1,6 @@
 from django.urls import path 
 from .views import pricescanner 
 
-urlspatterns = [
+urlpatterns = [
     path("upload", pricescanner, name="pricescanner")
 ]
