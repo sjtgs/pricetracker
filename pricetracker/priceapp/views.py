@@ -1,44 +1,32 @@
+# ocr_app/views.py
+import io
 from django.shortcuts import render
 from django.http import JsonResponse
-from .models import Item
-from .forms import PriceScannerForm
-from .utils import extract_text_from_image
-import os
 
-def pricescanner(request):
+from .forms import PriceScannerForm
+from .models import Item
+from .utils import extract_text_from_image, parse_text_to_items
+
+def upload_image(request):
     if request.method == "POST":
         form = PriceScannerForm(request.POST, request.FILES)
         if form.is_valid():
             image = form.cleaned_data["image"]
-            image_path = f"temp/{image.name}"
 
-            # Save the uploaded image temporarily
-            os.makedirs("temp", exist_ok=True)
-            with open(image_path, "wb") as f:
-                for chunk in image.chunks():
-                    f.write(chunk)
+            # Use the utils to extract text and parse items
+            text = extract_text_from_image(image)
+            items = parse_text_to_items(text)
 
-            # Extract text and process it
-            data = extract_text_from_image(image_path)
+            # Save extracted items to the database
+            for item_data in items:
+                Item.objects.create(
+                    name=item_data["name"],
+                    price=item_data["price"],
+                    description=item_data["description"],
+                )
 
-            # Save to the database
-            item = Item.objects.create(
-                name=data["name"],
-                description=data["description"],
-                price=data["price"],
-            )
+            return JsonResponse(items, safe=False)  # Return as JSON response
 
-            # Delete the temporary image
-            os.remove(image_path)
-
-            # Return JSON response
-            return JsonResponse({
-                "id": item.id,
-                "name": item.name,
-                "description": item.description,
-                "price": str(item.price),
-            })
     else:
         form = PriceScannerForm()
-
-    return render(request, "pricetracker_temp/pricetacker.html", {"form": form})
+    return render(request, "pricetacker/pricetracker.html", {"form": form})

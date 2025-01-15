@@ -1,30 +1,27 @@
+# ocr_app/utils.py
 from google.cloud import vision
-import re
 
-def extract_text_from_image(image_path):
+def extract_text_from_image(image):
     """Extract text from an image using Google Vision API."""
     client = vision.ImageAnnotatorClient()
+    content = image.read()
 
-    with open(image_path, "rb") as image_file:
-        content = image_file.read()
-    
     image = vision.Image(content=content)
     response = client.text_detection(image=image)
     texts = response.text_annotations
 
-    if response.error.message:
-        raise Exception(f"Google Vision API error: {response.error.message}")
+    if texts:
+        return texts[0].description  # First annotation contains all text
+    return ""
 
-    # The first text annotation contains the full text detected
-    full_text = texts[0].description if texts else ""
-
-    # Extract specific details (name, description, price) using regex
-    name = re.search(r"Name:\s*(.+)", full_text)
-    description = re.search(r"Description:\s*(.+)", full_text)
-    price = re.search(r"Price:\s*\$?([\d.]+)", full_text)
-
-    return {
-        "name": name.group(1) if name else "Unknown",
-        "description": description.group(1) if description else "No description",
-        "price": float(price.group(1)) if price else 0.0,
-    }
+def parse_text_to_items(text):
+    """Parse the extracted text into structured items."""
+    items = []
+    lines = text.split("\n")
+    for line in lines:
+        if "K" in line:  # Check if the line contains a price
+            parts = line.split("K")
+            name = parts[0].strip()
+            price = f"K{parts[1].strip()}"
+            items.append({"name": name, "price": price, "description": ""})
+    return items
